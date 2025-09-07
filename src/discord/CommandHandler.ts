@@ -1,5 +1,5 @@
 
-import { ButtonInteraction, ChatInputCommandInteraction, Interaction, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody, SharedSlashCommandOptions, StringMappedInteractionTypes, StringSelectMenuInteraction } from 'discord.js';
+import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
 import type { SlashCommandLayout, DropdownLayout, ButtonLayout } from '../types/DiscordTypes.js';
 import fs from 'fs';
 import path from 'path';
@@ -204,7 +204,31 @@ export class CommandHandler {
         }
     }
 
-    private async handleDropdown(interaction: StringSelectMenuInteraction): Promise<void> {
+    private async handleDropdown(interaction: AnySelectMenuInteraction): Promise<void> {
+        // customId format is:
+        // 1. yourCustomId (required)
+        // 2. interaction.user.id (required)
+        // 3. additional data (if needed, optional)
+        // then combined with underscore (_)
+        //
+        // Correct customId: 
+        // - exampleButton_${interaction.user.id}
+        // - exampleButton_${interaction.user.id}_confirm
+        // - exampleButton_${interaction.user.id}_abort
+        // 
+        // Invalid customId:
+        // - exampleButton  (Missing UserID)
+        // - exampleButton_confirm (Missing UserID)
+        // - exampleButton_abort (Missing UserID)
+        // - exampleButton_abort_${interaction.user.id} (UserID Misplacement)
+        //
+        // [Quick F.A.Q]
+        // Q: Wait, so this interaction is can only executed by the one who executed?
+        // A: Yes.
+        //
+        // Q: But i dont want that, i want other user can also interact with it.
+        // A: Well, you have to figure out by youself then.
+        
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
         console.log(`[${tags.Debug}] interaction userid: ${interaction.user.id}`)
@@ -238,6 +262,30 @@ export class CommandHandler {
     }
 
     private async handleButton(interaction: ButtonInteraction): Promise<void> {
+        // customId format is:
+        // 1. yourCustomId (required)
+        // 2. interaction.user.id (required)
+        // 3. additional data (if needed, optional)
+        // then combined with underscore (_)
+        //
+        // Correct customId: 
+        // - exampleButton_${interaction.user.id}
+        // - exampleButton_${interaction.user.id}_confirm
+        // - exampleButton_${interaction.user.id}_abort
+        // 
+        // Invalid customId:
+        // - exampleButton  (Missing UserID)
+        // - exampleButton_confirm (Missing UserID)
+        // - exampleButton_abort (Missing UserID)
+        // - exampleButton_abort_${interaction.user.id} (UserID Misplacement)
+        //
+        // [Quick F.A.Q]
+        // Q: Wait, so this interaction is can only executed by the one who executed?
+        // A: Yes.
+        //
+        // Q: But i dont want that, i want other user can also interact with it.
+        // A: Well, you have to figure out by youself then.
+        
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
         if (interaction.user.id !== originalUserId) {

@@ -1,9 +1,9 @@
 import type {
+  AnySelectMenuInteraction,
   ButtonInteraction,
   ChatInputCommandInteraction,
   Client,
   SlashCommandBuilder,
-  StringSelectMenuInteraction,
 } from 'discord.js';
 
 export interface SlashCommandLayout {
@@ -14,7 +14,7 @@ export interface SlashCommandLayout {
 // For DropdownLayout, you need to use camelCase. Having underscore (_) will break the interaction check
 export interface DropdownLayout {
   id: string;
-  execute: (client: Client, interaction: StringSelectMenuInteraction, data: string[]) => Promise<any>;
+  execute: (client: Client, interaction: AnySelectMenuInteraction, data: string[]) => Promise<any>;
 }
 
 // For ButtonLayout, you need to use camelCase. Having underscore (_) will break the interaction check
