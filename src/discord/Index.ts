@@ -1,4 +1,4 @@
-import {Client, Events} from 'discord.js';
+import { Client, Events } from 'discord.js';
 import client from './Client.js';
 import tags from '../utils/Tags.js';
 
@@ -7,7 +7,6 @@ console.log(`[${tags.System}] Loaded Discord Index Script.`)
 import { NewCommandHandler } from './NewCommandHandler.js';
 
 const commandHandler = new NewCommandHandler();
-
 
 client.on(Events.ClientReady, async (bot: Client) => {
   // loads commands

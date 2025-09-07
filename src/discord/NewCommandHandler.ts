@@ -1,10 +1,10 @@
 
+import { Interaction, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody, SharedSlashCommandOptions, StringMappedInteractionTypes } from 'discord.js';
+import type { SlashCommandLayout } from '../types/DiscordTypes.js';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
-import type { ChatInputCommandInteraction, Interaction, RESTPostAPIChatInputApplicationCommandsJSONBody, SlashCommandBuilder } from 'discord.js';
-import { REST, Routes, Collection } from 'discord.js';
-import type { SlashCommandLayout } from '../types/DiscordTypes.js';
+import { REST, Routes, Collection, EmbedBuilder, Colors } from 'discord.js';
 import client from './Client.js';
 import tags from '../utils/Tags.js';
 import { _dirname } from '../utils/Path.js';
@@ -17,6 +17,12 @@ if (!BotToken || !ClientID) {
 }
 
 const srcDir = path.join(_dirname, "..");
+
+interface LoadSlashCommandsGroupData {
+    name: string,
+    description: string,
+    options: any[]
+}
 
 export class NewCommandHandler {
     private readonly commands = new Collection<string, SlashCommandLayout>();
@@ -32,7 +38,7 @@ export class NewCommandHandler {
             if (stat.isDirectory()) {
                 const subFiles = fs.readdirSync(fullPath).filter(f => f.endsWith('.js') || f.endsWith('.ts'));
                 const group = new Collection<string, SlashCommandLayout>();
-                const groupData: any = {
+                const groupData: LoadSlashCommandsGroupData = {
                     name: file.toLowerCase(),
                     description: `${file} commands`,
                     options: [],
@@ -47,25 +53,32 @@ export class NewCommandHandler {
                         group.set(commandName, command);
                         groupData.options.push(command.metadata.toJSON());
                         this.commands.set(`${file}/${commandName}`, command);
+                        console.log(`[${tags.CommandImporter}] Imported ./${file}/${commandName}`)
+                    } else {
+                        console.log(`[${tags.CommandImporter}] ./${file}/${subFile} dosen't have metadata.`)
                     }
                 }
-                this.commandData.push(groupData);
 
+                this.commandData.push(groupData);
             } else if (file.endsWith('.js') || file.endsWith('.ts')) {
                 const { default: command } = await import(pathToFileURL(fullPath).href) as { default: SlashCommandLayout };
                 if (command.metadata) {
                     this.commands.set(command.metadata.name, command);
                     this.commandData.push(command.metadata.toJSON());
+                    console.log(`[${tags.CommandImporter}] Imported ./${command.metadata.name}`)
+                } else {
+                    console.log(`[${tags.CommandImporter}] ./${file} dosen't have metadata.`)
                 }
             }
         }
     }
 
     public async registerCommands(): Promise<void> {
+        const startTime = Date.now()
         const rest = new REST({ version: '10' }).setToken(BotToken);
 
         try {
-            console.log(`[${tags.CommandRegister}] Started refreshing application (/) commands.`);
+            console.log(`[${tags.CommandRegister}] Submitting ${this.commandData.length} slash command${this.commandData.length > 1 ? "s" : ""} to Discord REST API....`);
             await rest.put(
                 Routes.applicationCommands(ClientID),
                 { body: this.commandData },
@@ -73,6 +86,9 @@ export class NewCommandHandler {
             console.log(`[${tags.CommandRegister}] Successfully reloaded application (/) commands.`);
         } catch (error) {
             console.error(error);
+        } finally {
+            const endTime = Date.now()
+            console.log(`[${tags.CommandRegister}] Elapsed: ${endTime - startTime}ms`)
         }
     }
 
@@ -88,7 +104,17 @@ export class NewCommandHandler {
         const command = this.commands.get(commandName);
 
         if (!command) {
-            console.error(`No command matching ${commandName} was found.`);
+            const noCommandEmbed = new EmbedBuilder()
+            .setColor(Colors.DarkRed)
+            .setDescription(`❌ Couldn't find **${commandName}**. Try again later.`)
+
+            try {
+                await interaction.reply({ embeds: [noCommandEmbed], flags: MessageFlags.Ephemeral  })
+            } catch (e) {
+                console.log(`[${tags.Error}] Failed to send follow up error message.`)
+            }
+
+            console.log(`[${tags.Error}] Slash Command ${commandName} couldn't be found.`)
             return;
         }
 
@@ -98,10 +124,19 @@ export class NewCommandHandler {
             }
         } catch (error) {
             console.error(error);
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
-            } else {
-                await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+            const commandErrorEmbed = new EmbedBuilder()
+                .setColor(Colors.DarkRed)
+                .setDescription(`❌ There was an error while executing this command.`)
+
+            // sometimes discord returned unknown interaction
+            try {
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.reply({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                }
+            } catch (e) {
+                console.log(`[${tags.Error}] Failed to send follow up error message.`)
             }
         }
     }
