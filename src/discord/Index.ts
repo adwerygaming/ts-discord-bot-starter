@@ -4,15 +4,15 @@ import tags from '../utils/Tags.js';
 
 console.log(`[${tags.System}] Loaded Discord Index Script.`)
 
-import { NewCommandHandler } from './NewCommandHandler.js';
+import { CommandHandler } from './CommandHandler.js';
 
-const commandHandler = new NewCommandHandler();
+const commandHandler = new CommandHandler();
 
 client.on(Events.ClientReady, async (bot: Client) => {
   // loads commands
   await commandHandler.loadCommands();
-  // await commandHandler.loadDropdowns();
-  // await commandHandler.loadButtons();
+  await commandHandler.loadDropdowns();
+  await commandHandler.loadButtons();
 
   // register commands to discord
   await commandHandler.registerCommands();
