@@ -1,48 +1,33 @@
-import { QuickDB } from "quick.db";
-const temporaryDB = new QuickDB({ table: "temporary" })
+import cache from "./Cache.js";
 
-export default function TemporaryDB() {
-    const tempe_tempe_apa_yang_rary_ya_temporary_xixixixi = {
-        SetData: async (key: string, data: any) => {
-            if (!key || !data) {
-                return new Error("Please provide both key & data.")
-            }
-
-            try {
-                await temporaryDB.set(key, data)
-            } catch (e) {
-                return e
-            }
-
-            return data
-        },
-        GetData: async (key: string) => {
-            if (!key) {
-                return new Error("Please provide key.")
-            }
-
-            const data = await temporaryDB.get(key)
-
-            return data
-        },
-        DeleteData: async (key: string) => {
-            if (!key) {
-                return new Error("Please provide key.")
-            }
-
-            try {
-                const deletion = await temporaryDB.delete(key)
-
-                if (deletion) {
-                    return true
-                } else {
-                    return false
-                }
-            } catch (e) {
-                return e
-            }
+export default {
+    SetData: (key: string, data: any) => {
+        if (!key || !data) {
+            return new Error("No Key or Data Provided.")
         }
-    }
 
-    return tempe_tempe_apa_yang_rary_ya_temporary_xixixixi
+        cache.set(key, data)
+
+        return true
+    },
+    GetData: async (key: string) => {
+        if (!key) {
+            return new Error("No Key Provided.")
+        }
+
+        const data: any | undefined = await cache.get(key)
+
+        return data
+    },
+    DeleteData: (key: string) => {
+        if (!key) {
+            return new Error("No Key Provided.")
+        }
+
+        const data: any | undefined = cache.get(key)
+
+        cache.delete(key)
+
+        return data
+    }
 }
