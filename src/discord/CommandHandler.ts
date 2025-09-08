@@ -9,8 +9,8 @@ import client from './Client.js';
 import tags from '../utils/Tags.js';
 import { _dirname } from '../utils/Path.js';
 
-const BotToken = process.env.OUKA_DISCORD_TOKEN!;
-const ClientID = process.env.OUKA_DISCORD_CLIENT_ID!;
+const BotToken = process.env.DISCORD_TOKEN!;
+const ClientID = process.env.DISCORD_CLIENT_ID!;
 
 if (!BotToken || !ClientID) {
     throw new Error('⚠️ DISCORD_TOKEN and DISCORD_CLIENT_ID must be set in your environment');

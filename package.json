@@ -1,19 +1,19 @@
 {
-  "name": "pemula-ts",
+  "name": "ts-discord-bot-starter",
   "version": "1.0.0",
-  "description": "",
+  "description": "A Discord bot starter project built with TypeScript and discord.js.",
   "main": "dist/index.js",
   "scripts": {
     "dev": "npx tsx ./src/index.ts",
     "start": "npx tsx ./src/index.ts",
     "build": "tsup"
   },
-  "keywords": [],
+  "keywords": ["discord", "bot", "kit", "starterpack", "starter", "template"],
   "author": "adwerygaming",
   "license": "ISC",
   "type": "module",
   "engines": {
-    "node": ">=14"
+    "node": ">=21"
   },
   "devDependencies": {
     "@types/node": "^24.2.0",

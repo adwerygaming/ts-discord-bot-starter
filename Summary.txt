@@ -1,0 +1,13 @@
+Project: Discord Bot
+
+This project is a customizable bot for the chat application Discord. It is built to be extended with new features and commands.
+
+As a user, you can interact with the bot using slash commands in any channel it has access to.
+
+Available Features:
+
+- Check Bot Status: Use the `/ping` command to see if the bot is online and responsive. It will reply with "Pong!".
+
+- Button Example: Use the `/example button` command to see a message with several interactive buttons.
+
+- Dropdown Menu Example: Use the `/example dropdown` command to see a message with a dropdown menu that you can select options from.
