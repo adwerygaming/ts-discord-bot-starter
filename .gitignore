@@ -128,3 +128,11 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# MasDepan's list
+db/*.sqlite
+package-lock.json
+Summary.txt
+*.sqlite
+test/*
+test/

@@ -8,9 +8,10 @@ import { REST, Routes, Collection, EmbedBuilder, Colors } from 'discord.js';
 import client from './Client.js';
 import tags from '../utils/Tags.js';
 import { _dirname } from '../utils/Path.js';
+import { env } from '../utils/EnvManager.js';
 
-const BotToken = process.env.DISCORD_TOKEN!;
-const ClientID = process.env.DISCORD_CLIENT_ID!;
+const BotToken = env.DISCORD_TOKEN!;
+const ClientID = env.DISCORD_CLIENT_ID!;
 
 if (!BotToken || !ClientID) {
     throw new Error('⚠️ DISCORD_TOKEN and DISCORD_CLIENT_ID must be set in your environment');
