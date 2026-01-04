@@ -136,3 +136,5 @@ Summary.txt
 *.sqlite
 test/*
 test/
+# This line was added by CommitAI.
+.commitai
