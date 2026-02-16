@@ -1,5 +1,5 @@
 
-import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, Colors, EmbedBuilder, Interaction, MessageFlags, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
+import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, Colors, ContainerBuilder, Interaction, MessageFlags, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
@@ -195,16 +195,21 @@ export class CommandHandler {
         if (subCommand) {
             commandName += `/${subCommand}`;
         }
-        
+
         const command = this.commands.get(commandName);
 
         if (!command) {
-            const noCommandEmbed = new EmbedBuilder()
-            .setColor(Colors.DarkRed)
-            .setDescription(`❌ Couldn't find **${commandName}**. Try again later.`)
+            const noCommandContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`Couldn't find **${commandName}**. Try again later.`)
+                )
 
             try {
-                await interaction.reply({ embeds: [noCommandEmbed], flags: MessageFlags.Ephemeral  })
+                await interaction.reply({
+                    components: [noCommandContainer],
+                    flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                })
             } catch {
                 console.log(`[${tags.Error}] Failed to send follow up error message.`)
             }
@@ -219,16 +224,33 @@ export class CommandHandler {
             }
         } catch (error) {
             console.error(error);
-            const commandErrorEmbed = new EmbedBuilder()
-                .setColor(Colors.DarkRed)
-                .setDescription(`❌ There was an error while executing this command.`)
+            const commandErrorContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`There was an error while executing this command.`)
+                )
+
+            try {
+                await interaction.reply({
+                    components: [commandErrorContainer],
+                    flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                })
+            } catch {
+                console.log(`[${tags.Error}] Failed to send follow up error message.`)
+            }
 
             // sometimes discord returned unknown interaction
             try {
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                    await interaction.followUp({
+                        components: [commandErrorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    });
                 } else {
-                    await interaction.reply({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                    await interaction.reply({
+                        components: [commandErrorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    });
                 }
             } catch {
                 console.log(`[${tags.Error}] Failed to send follow up error message.`)
@@ -244,27 +266,55 @@ export class CommandHandler {
         console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`)
 
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({content: 'Not your interaction.', flags: MessageFlags.Ephemeral});
+            const notTheirsContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`This is not your interaction.`)
+                )
+
+            await interaction.reply({
+                components: [notTheirsContainer],
+                flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+            });
             return;
         }
 
         const dropdown = this.dropdowns.get(customId ?? '');
         if (!dropdown) {
-            await interaction.reply({content: 'Dropdown handler not found!', flags: MessageFlags.Ephemeral});
+            const noDropdownContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`Couldn't find dropdown handler for **${customId}**. Try again later.`)
+                )
+
+            await interaction.reply({
+                components: [noDropdownContainer],
+                flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+            });
             return;
         }
-        
+
         try {
             await dropdown.execute(client, interaction, rest);
         } catch (err) {
             console.error(`[${tags.CommandRegister}] Error handling dropdown ${customId}:`, err);
-            const msg = 'There was an error handling this dropdown.';
+            const errorContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`There was an error handling this dropdown.`)
+                )
 
             try {
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral })
+                    await interaction.followUp({
+                        components: [errorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    })
                 } else {
-                    await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+                    await interaction.reply({
+                        components: [errorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    });
                 }
             } catch (e) {
                 console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
@@ -276,14 +326,32 @@ export class CommandHandler {
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({content: 'Not your interaction.', flags: MessageFlags.Ephemeral});
+            const notTheirsContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`This is not your interaction.`)
+                )
+
+            await interaction.reply({
+                components: [notTheirsContainer],
+                flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+            });
             return;
         }
 
         const button = this.buttons.get(customId ?? '');
 
         if (!button) {
-            await interaction.reply({content: 'Button handler not found!', flags: MessageFlags.Ephemeral});
+            const noButtonContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`Couldn't find button handler for **${customId}**. Try again later.`)
+                )
+
+            await interaction.reply({
+                components: [noButtonContainer],
+                flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+            });
             return;
         }
 
@@ -291,13 +359,23 @@ export class CommandHandler {
             await button.execute(client, interaction, rest);
         } catch (err) {
             console.error(`[${tags.CommandRegister}] Error handling button ${interaction.customId}:`, err);
-            const msg = 'There was an error handling this button.';
+            const errorContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`There was an error handling this button.'`)
+                )
 
             try {
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral })
+                    await interaction.followUp({
+                        components: [errorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    })
                 } else {
-                    await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+                    await interaction.reply({
+                        components: [errorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    });
                 }
             } catch (e) {
                 console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
@@ -313,13 +391,31 @@ export class CommandHandler {
         console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`)
 
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({ content: 'Not your interaction.', flags: MessageFlags.Ephemeral });
+            const notTheirsContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`This is not your interaction.`)
+                )
+
+            await interaction.reply({
+                components: [notTheirsContainer],
+                flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+            });
             return;
         }
 
         const modal = this.modals.get(customId ?? '');
         if (!modal) {
-            await interaction.reply({ content: 'Modal handler not found!', flags: MessageFlags.Ephemeral });
+            const noModalContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`Couldn't find modal handler for **${customId}**. Try again later.`)
+                )
+
+            await interaction.reply({
+                components: [noModalContainer],
+                flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+            });
             return;
         }
 
@@ -327,13 +423,23 @@ export class CommandHandler {
             await modal.execute(client, interaction, rest);
         } catch (err) {
             console.error(`[${tags.CommandRegister}] Error handling modal ${customId}:`, err);
-            const msg = 'There was an error handling this modal.';
+            const errorContainer = new ContainerBuilder()
+                .setAccentColor(Colors.DarkRed)
+                .addTextDisplayComponents(
+                    (text) => text.setContent(`There was an error handling this modal.`)
+                )
 
             try {
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral })
+                    await interaction.followUp({
+                        components: [errorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    })
                 } else {
-                    await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+                    await interaction.reply({
+                        components: [errorContainer],
+                        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+                    });
                 }
             } catch (e) {
                 console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
