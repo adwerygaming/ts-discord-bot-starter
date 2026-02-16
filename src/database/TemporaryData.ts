@@ -10,6 +10,10 @@ interface GetDataProp {
     key: string
 }
 
+interface DeleteDataProp {
+    key: string
+}
+
 export default {
     /**
      * Generate a random unique key using UUID v7
@@ -41,11 +45,11 @@ export default {
     },
 
     /**
-     * Delete data from cache
-     * @param key Key to identify the data in cache
-     * @returns T | undefined - data if found, undefined if not found
-     */
-    DeleteData<T>(key: string): T | undefined {
+        * Delete data from cache
+        * @param key Key to identify the data in cache
+        * @returns T | undefined - data if found, undefined if not found
+        */
+    DeleteData<T>({ key }: DeleteDataProp): T | undefined {
         const data: T | undefined = cache.get(key) as T | undefined
         cache.delete(key)
         return data

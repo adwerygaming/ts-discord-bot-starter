@@ -1,6 +1,6 @@
 import { Client, Events } from 'discord.js';
-import client from './Client.js';
 import tags from '../utils/Tags.js';
+import client from './Client.js';
 
 console.log(`[${tags.System}] Loaded Discord Index Script.`)
 

@@ -1,9 +1,9 @@
-import { Client, AnySelectMenuInteraction, EmbedBuilder, Colors } from "discord.js";
+import { AnySelectMenuInteraction, Client, Colors, EmbedBuilder } from "discord.js";
 import { DropdownLayout } from "../../types/DiscordTypes.js";
 
 export default {
     id: "exampleRoleSelectMenu",
-    execute: async (_client: Client, interaction: AnySelectMenuInteraction, _data: string[]) => {
+    execute: async (_client: Client, interaction: AnySelectMenuInteraction) => {
         if (!interaction.isStringSelectMenu()) return
 
         // continuing from example/dropdown.ts,

@@ -1,4 +1,3 @@
-
 import { ButtonInteraction, Client, Colors, EmbedBuilder } from "discord.js";
 import { ButtonLayout } from "../../types/DiscordTypes.js";
 

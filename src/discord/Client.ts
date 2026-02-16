@@ -1,4 +1,4 @@
-import { GatewayIntentBits, Client } from 'discord.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 import { env } from '../utils/EnvManager.js';
 
 const BotToken = env.DISCORD_TOKEN;

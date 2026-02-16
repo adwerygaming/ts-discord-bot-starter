@@ -24,7 +24,10 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.9",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
     "concurrently": "^9.2.1",
+    "eslint": "^9.39.2",
     "nodemon": "^3.1.11",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
@@ -34,8 +37,10 @@
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
     "gradient-string": "^3.0.0",
+    "jiti": "^2.6.1",
     "lru-cache": "^11.2.4",
     "moment-timezone": "^0.6.0",
+    "typescript-eslint": "^8.55.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.5"
   }

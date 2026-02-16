@@ -1,27 +1,23 @@
 
-import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
-import type { SlashCommandLayout, DropdownLayout, ButtonLayout } from '../types/DiscordTypes.js';
+import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, Colors, EmbedBuilder, Interaction, MessageFlags, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { REST, Routes, Collection, EmbedBuilder, Colors } from 'discord.js';
-import client from './Client.js';
-import tags from '../utils/Tags.js';
-import { _dirname } from '../utils/Path.js';
+import type { ButtonLayout, DropdownLayout, SlashCommandLayout } from '../types/DiscordTypes.js';
 import { env } from '../utils/EnvManager.js';
+import { _dirname } from '../utils/Path.js';
+import tags from '../utils/Tags.js';
+import client from './Client.js';
 
-const BotToken = env.DISCORD_TOKEN!;
-const ClientID = env.DISCORD_CLIENT_ID!;
-
-if (!BotToken || !ClientID) {
-    throw new Error('⚠️ DISCORD_TOKEN and DISCORD_CLIENT_ID must be set in your environment');
-}
+const botToken = env.DISCORD_TOKEN;
+const clientID = env.DISCORD_CLIENT_ID;
 
 const srcDir = path.join(_dirname, "..");
 
 interface LoadSlashCommandsGroupData {
     name: string,
     description: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options: any[]
 }
 
@@ -50,7 +46,7 @@ export class CommandHandler {
                 for (const subFile of subFiles) {
                     const subFilePath = path.join(fullPath, subFile);
                     const { default: command } = await import(pathToFileURL(subFilePath).href) as { default: SlashCommandLayout };
-                    
+
                     if (command.metadata) {
                         const commandName = command.metadata.name;
                         group.set(commandName, command);
@@ -131,12 +127,18 @@ export class CommandHandler {
 
     public async registerCommands(): Promise<void> {
         const startTime = Date.now()
-        const rest = new REST({ version: '10' }).setToken(BotToken);
+
+        if (!botToken || !clientID) {
+            console.error('DISCORD_TOKEN and DISCORD_CLIENT_ID must be set in your environment to register commands.');
+            return
+        }
+
+        const rest = new REST({ version: '10' }).setToken(botToken);
 
         try {
             console.log(`[${tags.CommandRegister}] Submitting ${this.commandData.length} slash command${this.commandData.length > 1 ? "s" : ""} to Discord REST API....`);
             await rest.put(
-                Routes.applicationCommands(ClientID),
+                Routes.applicationCommands(clientID),
                 { body: this.commandData },
             );
             console.log(`[${tags.CommandRegister}] Successfully reloaded application (/) commands.`);
@@ -164,17 +166,17 @@ export class CommandHandler {
         if (subCommand) {
             commandName += `/${subCommand}`;
         }
-        
+
         const command = this.commands.get(commandName);
 
         if (!command) {
             const noCommandEmbed = new EmbedBuilder()
-            .setColor(Colors.DarkRed)
-            .setDescription(`❌ Couldn't find **${commandName}**. Try again later.`)
+                .setColor(Colors.DarkRed)
+                .setDescription(`❌ Couldn't find **${commandName}**. Try again later.`)
 
             try {
-                await interaction.reply({ embeds: [noCommandEmbed], flags: MessageFlags.Ephemeral  })
-            } catch (e) {
+                await interaction.reply({ embeds: [noCommandEmbed], flags: MessageFlags.Ephemeral })
+            } catch {
                 console.log(`[${tags.Error}] Failed to send follow up error message.`)
             }
 
@@ -199,7 +201,7 @@ export class CommandHandler {
                 } else {
                     await interaction.reply({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
                 }
-            } catch (e) {
+            } catch {
                 console.log(`[${tags.Error}] Failed to send follow up error message.`)
             }
         }
@@ -229,35 +231,40 @@ export class CommandHandler {
         //
         // Q: But i dont want that, i want other user can also interact with it.
         // A: Well, you have to figure out by youself then.
-        
+
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
         console.log(`[${tags.Debug}] interaction userid: ${interaction.user.id}`)
         console.log(`[${tags.Debug}] original userid: ${originalUserId}`)
 
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({content: 'Not your interaction.', flags: MessageFlags.Ephemeral});
+            await interaction.reply({ content: 'Not your interaction.', flags: MessageFlags.Ephemeral });
             return;
         }
 
         const dropdown = this.dropdowns.get(customId ?? '');
         if (!dropdown) {
-            await interaction.reply({content: 'Dropdown handler not found!', flags: MessageFlags.Ephemeral});
+            await interaction.reply({ content: 'Dropdown handler not found!', flags: MessageFlags.Ephemeral });
             return;
         }
-        
+
         try {
             await dropdown.execute(client, interaction, rest);
         } catch (err) {
             console.error(`[${tags.CommandRegister}] Error handling dropdown ${customId}:`, err);
-            const msg = 'There was an error handling this dropdown.';
+            const commandErrorEmbed = new EmbedBuilder()
+                .setColor(Colors.DarkRed)
+                .setDescription(`❌ There was an error while executing this command.`)
 
+            // sometimes discord returned unknown interaction
             try {
-                interaction.replied || interaction.deferred
-                    ? await interaction.followUp({content: msg, flags: MessageFlags.Ephemeral})
-                    : await interaction.reply({content: msg, flags: MessageFlags.Ephemeral});
-            } catch (e) {
-                console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.reply({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                }
+            } catch {
+                console.log(`[${tags.Error}] Failed to send follow up error message.`)
             }
         }
     }
@@ -286,18 +293,18 @@ export class CommandHandler {
         //
         // Q: But i dont want that, i want other user can also interact with it.
         // A: Well, you have to figure out by youself then.
-        
+
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({content: 'Not your interaction.', flags: MessageFlags.Ephemeral});
+            await interaction.reply({ content: 'Not your interaction.', flags: MessageFlags.Ephemeral });
             return;
         }
 
         const button = this.buttons.get(customId ?? '');
 
         if (!button) {
-            await interaction.reply({content: 'Button handler not found!', flags: MessageFlags.Ephemeral});
+            await interaction.reply({ content: 'Button handler not found!', flags: MessageFlags.Ephemeral });
             return;
         }
 
@@ -305,13 +312,19 @@ export class CommandHandler {
             await button.execute(client, interaction, rest);
         } catch (err) {
             console.error(`[${tags.CommandRegister}] Error handling button ${interaction.customId}:`, err);
-            const msg = 'There was an error handling this button.';
+            const commandErrorEmbed = new EmbedBuilder()
+                .setColor(Colors.DarkRed)
+                .setDescription(`❌ There was an error while executing this command.`)
+
+            // sometimes discord returned unknown interaction
             try {
-                interaction.replied || interaction.deferred
-                    ? await interaction.followUp({content: msg, flags: MessageFlags.Ephemeral})
-                    : await interaction.reply({content: msg, flags: MessageFlags.Ephemeral});
-            } catch (e) {
-                console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.reply({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                }
+            } catch {
+                console.log(`[${tags.Error}] Failed to send follow up error message.`)
             }
         }
     }
