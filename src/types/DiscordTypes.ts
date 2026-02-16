@@ -3,6 +3,7 @@ import type {
   ButtonInteraction,
   ChatInputCommandInteraction,
   Client,
+  ModalSubmitInteraction,
   SlashCommandBuilder,
 } from 'discord.js';
 
@@ -21,4 +22,9 @@ export interface DropdownLayout {
 export interface ButtonLayout {
   id: string;
   execute: (client: Client, interaction: ButtonInteraction, data: string[]) => Promise<void>;
+}
+
+export interface ModalLayout {
+  id: string;
+  execute: (client: Client, interaction: ModalSubmitInteraction, data: string[]) => Promise<void>;
 }

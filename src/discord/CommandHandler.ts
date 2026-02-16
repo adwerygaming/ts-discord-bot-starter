@@ -1,9 +1,9 @@
 
-import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, Colors, EmbedBuilder, Interaction, MessageFlags, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
+import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, Colors, EmbedBuilder, Interaction, MessageFlags, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
-import type { ButtonLayout, DropdownLayout, SlashCommandLayout } from '../types/DiscordTypes.js';
+import type { ButtonLayout, DropdownLayout, ModalLayout, SlashCommandLayout } from '../types/DiscordTypes.js';
 import { env } from '../utils/EnvManager.js';
 import { _dirname } from '../utils/Path.js';
 import tags from '../utils/Tags.js';
@@ -12,7 +12,7 @@ import client from './Client.js';
 const botToken = env.DISCORD_TOKEN;
 const clientID = env.DISCORD_CLIENT_ID;
 
-const srcDir = path.join(_dirname, "..");
+const srcDir = path.join(_dirname);
 
 interface LoadSlashCommandsGroupData {
     name: string,
@@ -24,6 +24,7 @@ interface LoadSlashCommandsGroupData {
 export class CommandHandler {
     private readonly commands = new Collection<string, SlashCommandLayout>();
     private readonly dropdowns = new Collection<string, DropdownLayout>();
+    private readonly modals = new Collection<string, ModalLayout>();
     private readonly buttons = new Collection<string, ButtonLayout>();
     private readonly commandData: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 
@@ -46,7 +47,7 @@ export class CommandHandler {
                 for (const subFile of subFiles) {
                     const subFilePath = path.join(fullPath, subFile);
                     const { default: command } = await import(pathToFileURL(subFilePath).href) as { default: SlashCommandLayout };
-
+                    
                     if (command.metadata) {
                         const commandName = command.metadata.name;
                         group.set(commandName, command);
@@ -125,14 +126,40 @@ export class CommandHandler {
         }
     }
 
-    public async registerCommands(): Promise<void> {
-        const startTime = Date.now()
+    public async loadModals(dir = path.join(srcDir, "discord", "modals")): Promise<void> {
+        if (!fs.existsSync(dir)) {
+            console.log(`[${tags.CommandImporter}] Modals directory not found, skipping...`);
+            return;
+        }
 
+        for (const file of fs.readdirSync(dir)) {
+            const fullPath = path.join(dir, file);
+            const stat = fs.statSync(fullPath);
+            if (stat.isDirectory()) {
+                await this.loadModals(fullPath);
+            } else if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {
+                try {
+                    const { default: modal }: { default: ModalLayout } = await import(pathToFileURL(fullPath).href);
+                    if (!modal.id || !modal.execute) {
+                        console.warn(`[${tags.CommandImporter}] Modal at ${fullPath} missing id or execute`);
+                        continue;
+                    }
+                    this.modals.set(modal.id, modal);
+                    console.log(`[${tags.CommandImporter}] Loaded modal: ${modal.id}`);
+                } catch (err) {
+                    console.error(`[${tags.Error}] Error loading modal ${fullPath}:`, err);
+                }
+            }
+        }
+    }
+
+    public async registerCommands(): Promise<void> {
         if (!botToken || !clientID) {
             console.error('DISCORD_TOKEN and DISCORD_CLIENT_ID must be set in your environment to register commands.');
             return
         }
 
+        const startTime = Date.now()
         const rest = new REST({ version: '10' }).setToken(botToken);
 
         try {
@@ -157,6 +184,8 @@ export class CommandHandler {
             await this.handleDropdown(interaction);
         } else if (interaction.isButton()) {
             await this.handleButton(interaction);
+        } else if (interaction.isModalSubmit()) {
+            await this.handleModal(interaction);
         }
     }
 
@@ -166,16 +195,16 @@ export class CommandHandler {
         if (subCommand) {
             commandName += `/${subCommand}`;
         }
-
+        
         const command = this.commands.get(commandName);
 
         if (!command) {
             const noCommandEmbed = new EmbedBuilder()
-                .setColor(Colors.DarkRed)
-                .setDescription(`❌ Couldn't find **${commandName}**. Try again later.`)
+            .setColor(Colors.DarkRed)
+            .setDescription(`❌ Couldn't find **${commandName}**. Try again later.`)
 
             try {
-                await interaction.reply({ embeds: [noCommandEmbed], flags: MessageFlags.Ephemeral })
+                await interaction.reply({ embeds: [noCommandEmbed], flags: MessageFlags.Ephemeral  })
             } catch {
                 console.log(`[${tags.Error}] Failed to send follow up error message.`)
             }
@@ -208,103 +237,53 @@ export class CommandHandler {
     }
 
     private async handleDropdown(interaction: AnySelectMenuInteraction): Promise<void> {
-        // customId format is:
-        // 1. yourCustomId (required)
-        // 2. interaction.user.id (required)
-        // 3. additional data (if needed, optional)
-        // then combined with underscore (_)
-        //
-        // Correct customId: 
-        // - exampleButton_${interaction.user.id}
-        // - exampleButton_${interaction.user.id}_confirm
-        // - exampleButton_${interaction.user.id}_abort
-        // 
-        // Invalid customId:
-        // - exampleButton  (Missing UserID)
-        // - exampleButton_confirm (Missing UserID)
-        // - exampleButton_abort (Missing UserID)
-        // - exampleButton_abort_${interaction.user.id} (UserID Misplacement)
-        //
-        // [Quick F.A.Q]
-        // Q: Wait, so this interaction is can only executed by the one who executed?
-        // A: Yes.
-        //
-        // Q: But i dont want that, i want other user can also interact with it.
-        // A: Well, you have to figure out by youself then.
-
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
-        console.log(`[${tags.Debug}] interaction userid: ${interaction.user.id}`)
-        console.log(`[${tags.Debug}] original userid: ${originalUserId}`)
+        console.log(`[${tags.Debug}] Interaction UserId: ${interaction.user.id}`)
+        console.log(`[${tags.Debug}] Original UserId: ${originalUserId}`)
+        console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`)
 
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({ content: 'Not your interaction.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({content: 'Not your interaction.', flags: MessageFlags.Ephemeral});
             return;
         }
 
         const dropdown = this.dropdowns.get(customId ?? '');
         if (!dropdown) {
-            await interaction.reply({ content: 'Dropdown handler not found!', flags: MessageFlags.Ephemeral });
+            await interaction.reply({content: 'Dropdown handler not found!', flags: MessageFlags.Ephemeral});
             return;
         }
-
+        
         try {
             await dropdown.execute(client, interaction, rest);
         } catch (err) {
             console.error(`[${tags.CommandRegister}] Error handling dropdown ${customId}:`, err);
-            const commandErrorEmbed = new EmbedBuilder()
-                .setColor(Colors.DarkRed)
-                .setDescription(`❌ There was an error while executing this command.`)
+            const msg = 'There was an error handling this dropdown.';
 
-            // sometimes discord returned unknown interaction
             try {
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                    await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral })
                 } else {
-                    await interaction.reply({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                    await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
                 }
-            } catch {
-                console.log(`[${tags.Error}] Failed to send follow up error message.`)
+            } catch (e) {
+                console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
             }
         }
     }
 
     private async handleButton(interaction: ButtonInteraction): Promise<void> {
-        // customId format is:
-        // 1. yourCustomId (required)
-        // 2. interaction.user.id (required)
-        // 3. additional data (if needed, optional)
-        // then combined with underscore (_)
-        //
-        // Correct customId: 
-        // - exampleButton_${interaction.user.id}
-        // - exampleButton_${interaction.user.id}_confirm
-        // - exampleButton_${interaction.user.id}_abort
-        // 
-        // Invalid customId:
-        // - exampleButton  (Missing UserID)
-        // - exampleButton_confirm (Missing UserID)
-        // - exampleButton_abort (Missing UserID)
-        // - exampleButton_abort_${interaction.user.id} (UserID Misplacement)
-        //
-        // [Quick F.A.Q]
-        // Q: Wait, so this interaction is can only executed by the one who executed?
-        // A: Yes.
-        //
-        // Q: But i dont want that, i want other user can also interact with it.
-        // A: Well, you have to figure out by youself then.
-
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({ content: 'Not your interaction.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({content: 'Not your interaction.', flags: MessageFlags.Ephemeral});
             return;
         }
 
         const button = this.buttons.get(customId ?? '');
 
         if (!button) {
-            await interaction.reply({ content: 'Button handler not found!', flags: MessageFlags.Ephemeral });
+            await interaction.reply({content: 'Button handler not found!', flags: MessageFlags.Ephemeral});
             return;
         }
 
@@ -312,19 +291,52 @@ export class CommandHandler {
             await button.execute(client, interaction, rest);
         } catch (err) {
             console.error(`[${tags.CommandRegister}] Error handling button ${interaction.customId}:`, err);
-            const commandErrorEmbed = new EmbedBuilder()
-                .setColor(Colors.DarkRed)
-                .setDescription(`❌ There was an error while executing this command.`)
+            const msg = 'There was an error handling this button.';
 
-            // sometimes discord returned unknown interaction
             try {
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                    await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral })
                 } else {
-                    await interaction.reply({ embeds: [commandErrorEmbed], flags: MessageFlags.Ephemeral });
+                    await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
                 }
-            } catch {
-                console.log(`[${tags.Error}] Failed to send follow up error message.`)
+            } catch (e) {
+                console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
+            }
+        }
+    }
+
+    private async handleModal(interaction: ModalSubmitInteraction): Promise<void> {
+        const [customId, originalUserId, ...rest] = interaction.customId.split('_');
+
+        console.log(`[${tags.Debug}] Interaction UserId: ${interaction.user.id}`)
+        console.log(`[${tags.Debug}] Original UserId: ${originalUserId}`)
+        console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`)
+
+        if (interaction.user.id !== originalUserId) {
+            await interaction.reply({ content: 'Not your interaction.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        const modal = this.modals.get(customId ?? '');
+        if (!modal) {
+            await interaction.reply({ content: 'Modal handler not found!', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        try {
+            await modal.execute(client, interaction, rest);
+        } catch (err) {
+            console.error(`[${tags.CommandRegister}] Error handling modal ${customId}:`, err);
+            const msg = 'There was an error handling this modal.';
+
+            try {
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral })
+                } else {
+                    await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+                }
+            } catch (e) {
+                console.log(`[${tags.Discord}] Error sending error catch message: ${e}`);
             }
         }
     }
