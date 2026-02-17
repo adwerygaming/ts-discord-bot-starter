@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "npx tsx ./src/index.ts",
     "start": "npx tsx ./src/index.ts",
+    "lint": "npx eslint .",
     "build": "tsup"
   },
   "keywords": [
