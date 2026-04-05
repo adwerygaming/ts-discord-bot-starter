@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ChatInputCommandInteraction, Client, Colors, EmbedBuilder, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from "discord.js";
-import { SlashCommandLayout } from "../../../types/DiscordTypes.js";
+import { SlashCommandLayout } from "../../../types/Discord.types.js";
 
 export default {
     metadata: new SlashCommandBuilder()
@@ -37,18 +37,18 @@ export default {
                     .setEmoji("🟣"),
             )
             .setMaxValues(3)
-            .setMinValues(1)
+            .setMinValues(1);
 
         const rowsOfButtons = new ActionRowBuilder<StringSelectMenuBuilder>()
-        .addComponents(roleColorSelectMenu)
+        .addComponents(roleColorSelectMenu);
 
         const embed = new EmbedBuilder()
         .setColor(Colors.Blurple)
-        .setDescription("Select a role.")
+        .setDescription("Select a role.");
 
         await interaction.reply({
             embeds: [embed],
             components: [rowsOfButtons]
-        })
+        });
     },
-} as SlashCommandLayout
+} as SlashCommandLayout;

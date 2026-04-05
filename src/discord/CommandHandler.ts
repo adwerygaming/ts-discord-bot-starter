@@ -2,7 +2,7 @@ import { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteractio
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import type { ButtonLayout, DropdownLayout, ModalLayout, SlashCommandLayout } from '../types/DiscordTypes.js';
+import type { ButtonLayout, DropdownLayout, ModalLayout, SlashCommandLayout } from '../types/Discord.types.js';
 import { env } from '../utils/EnvManager.js';
 import tags from '../utils/Tags.js';
 import client from './Client.js';
@@ -48,28 +48,21 @@ export class CommandHandler {
                 for (const subFile of subFiles) {
                     const subFilePath = path.join(fullPath, subFile);
                     const { default: command } = await import(pathToFileURL(subFilePath).href) as { default: SlashCommandLayout };
-                    
-                    if (command.metadata) {
-                        const commandName = command.metadata.name;
-                        group.set(commandName, command);
-                        groupData.options.push(command.metadata.toJSON());
-                        this.commands.set(`${file}/${commandName}`, command);
-                        console.log(`[${tags.CommandImporter}] Imported ./${file}/${commandName}`)
-                    } else {
-                        console.log(`[${tags.CommandImporter}] ./${file}/${subFile} dosen't have metadata.`)
-                    }
+
+                    const commandName = command.metadata.name;
+                    group.set(commandName, command);
+                    groupData.options.push(command.metadata.toJSON());
+                    this.commands.set(`${file}/${commandName}`, command);
+                    console.log(`[${tags.CommandImporter}] Imported ./${file}/${commandName}`);
                 }
 
                 this.commandData.push(groupData);
             } else if (file.endsWith('.js') || file.endsWith('.ts')) {
                 const { default: command } = await import(pathToFileURL(fullPath).href) as { default: SlashCommandLayout };
-                if (command.metadata) {
-                    this.commands.set(command.metadata.name, command);
-                    this.commandData.push(command.metadata.toJSON());
-                    console.log(`[${tags.CommandImporter}] Imported ./${command.metadata.name}`)
-                } else {
-                    console.log(`[${tags.CommandImporter}] ./${file} dosen't have metadata.`)
-                }
+
+                this.commands.set(command.metadata.name, command);
+                this.commandData.push(command.metadata.toJSON());
+                console.log(`[${tags.CommandImporter}] Imported ./${command.metadata.name}`);
             }
         }
     }
@@ -88,10 +81,7 @@ export class CommandHandler {
             } else if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {
                 try {
                     const { default: dropdown }: { default: DropdownLayout } = await import(pathToFileURL(fullPath).href);
-                    if (!dropdown.id || !dropdown.execute) {
-                        console.warn(`[${tags.CommandImporter}] Dropdown at ${fullPath} missing id or execute`);
-                        continue;
-                    }
+
                     this.dropdowns.set(dropdown.id, dropdown);
                     console.log(`[${tags.CommandImporter}] Loaded dropdown: ${dropdown.id}`);
                 } catch (err) {
@@ -114,10 +104,7 @@ export class CommandHandler {
             } else if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {
                 try {
                     const { default: button }: { default: ButtonLayout } = await import(pathToFileURL(fullPath).href);
-                    if (!button.id || !button.execute) {
-                        console.warn(`[${tags.CommandImporter}] Button at ${fullPath} missing id or execute`);
-                        continue;
-                    }
+
                     this.buttons.set(button.id, button);
                     console.log(`[${tags.CommandImporter}] Loaded button: ${button.id}`);
                 } catch (err) {
@@ -141,10 +128,7 @@ export class CommandHandler {
             } else if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {
                 try {
                     const { default: modal }: { default: ModalLayout } = await import(pathToFileURL(fullPath).href);
-                    if (!modal.id || !modal.execute) {
-                        console.warn(`[${tags.CommandImporter}] Modal at ${fullPath} missing id or execute`);
-                        continue;
-                    }
+
                     this.modals.set(modal.id, modal);
                     console.log(`[${tags.CommandImporter}] Loaded modal: ${modal.id}`);
                 } catch (err) {
@@ -157,10 +141,10 @@ export class CommandHandler {
     public async registerCommands(): Promise<void> {
         if (!botToken || !clientID) {
             console.error('DISCORD_TOKEN and DISCORD_CLIENT_ID must be set in your environment to register commands.');
-            return
+            return;
         }
 
-        const startTime = Date.now()
+        const startTime = Date.now();
         const rest = new REST({ version: '10' }).setToken(botToken);
 
         try {
@@ -173,8 +157,8 @@ export class CommandHandler {
         } catch (error) {
             console.error(error);
         } finally {
-            const endTime = Date.now()
-            console.log(`[${tags.CommandRegister}] Elapsed: ${endTime - startTime}ms`)
+            const endTime = Date.now();
+            console.log(`[${tags.CommandRegister}] Elapsed: ${endTime - startTime}ms`);
         }
     }
 
@@ -204,40 +188,38 @@ export class CommandHandler {
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`Couldn't find **${commandName}**. Try again later.`)
-                )
+                );
 
             try {
                 await interaction.reply({
                     components: [noCommandContainer],
                     flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
-                })
+                });
             } catch {
-                console.log(`[${tags.Error}] Failed to send follow up error message.`)
+                console.log(`[${tags.Error}] Failed to send follow up error message.`);
             }
 
-            console.log(`[${tags.Error}] Slash Command ${commandName} couldn't be found.`)
+            console.log(`[${tags.Error}] Slash Command ${commandName} couldn't be found.`);
             return;
         }
 
         try {
-            if (command.execute) {
-                await command.execute(client, interaction);
-            }
+            await command.execute(client, interaction);
         } catch (error) {
             console.error(error);
             const commandErrorContainer = new ContainerBuilder()
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`There was an error while executing this command.`)
-                )
+                );
 
             try {
                 await interaction.reply({
                     components: [commandErrorContainer],
                     flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
-                })
+                });
             } catch {
-                console.log(`[${tags.Error}] Failed to send follow up error message.`)
+                console.log(`[${tags.Error}] Failed to send follow up error message.`);
             }
 
             // sometimes discord returned unknown interaction
@@ -254,7 +236,7 @@ export class CommandHandler {
                     });
                 }
             } catch {
-                console.log(`[${tags.Error}] Failed to send follow up error message.`)
+                console.log(`[${tags.Error}] Failed to send follow up error message.`);
             }
         }
     }
@@ -262,16 +244,20 @@ export class CommandHandler {
     private async handleDropdown(interaction: AnySelectMenuInteraction): Promise<void> {
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
-        console.log(`[${tags.Debug}] Interaction UserId: ${interaction.user.id}`)
-        console.log(`[${tags.Debug}] Original UserId: ${originalUserId}`)
-        console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`)
+        if (interaction.customId.includes("cmdhdlrignore")) {
+            return;
+        }
+
+        console.log(`[${tags.Debug}] Interaction UserId: ${interaction.user.id}`);
+        console.log(`[${tags.Debug}] Original UserId: ${originalUserId}`);
+        console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`);
 
         if (interaction.user.id !== originalUserId) {
             const notTheirsContainer = new ContainerBuilder()
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`This is not your interaction.`)
-                )
+                );
 
             await interaction.reply({
                 components: [notTheirsContainer],
@@ -280,13 +266,13 @@ export class CommandHandler {
             return;
         }
 
-        const dropdown = this.dropdowns.get(customId ?? '');
+        const dropdown = this.dropdowns.get(customId);
         if (!dropdown) {
             const noDropdownContainer = new ContainerBuilder()
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`Couldn't find dropdown handler for **${customId}**. Try again later.`)
-                )
+                );
 
             await interaction.reply({
                 components: [noDropdownContainer],
@@ -303,14 +289,14 @@ export class CommandHandler {
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`There was an error handling this dropdown.`)
-                )
+                );
 
             try {
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp({
                         components: [errorContainer],
                         flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
-                    })
+                    });
                 } else {
                     await interaction.reply({
                         components: [errorContainer],
@@ -326,12 +312,16 @@ export class CommandHandler {
     private async handleButton(interaction: ButtonInteraction): Promise<void> {
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
+        if (interaction.customId.includes("cmdhdlrignore")) {
+            return;
+        }
+
         if (interaction.user.id !== originalUserId) {
             const notTheirsContainer = new ContainerBuilder()
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`This is not your interaction.`)
-                )
+                );
 
             await interaction.reply({
                 components: [notTheirsContainer],
@@ -340,14 +330,14 @@ export class CommandHandler {
             return;
         }
 
-        const button = this.buttons.get(customId ?? '');
+        const button = this.buttons.get(customId);
 
         if (!button) {
             const noButtonContainer = new ContainerBuilder()
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`Couldn't find button handler for **${customId}**. Try again later.`)
-                )
+                );
 
             await interaction.reply({
                 components: [noButtonContainer],
@@ -364,14 +354,14 @@ export class CommandHandler {
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`There was an error handling this button.'`)
-                )
+                );
 
             try {
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp({
                         components: [errorContainer],
                         flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
-                    })
+                    });
                 } else {
                     await interaction.reply({
                         components: [errorContainer],
@@ -387,16 +377,20 @@ export class CommandHandler {
     private async handleModal(interaction: ModalSubmitInteraction): Promise<void> {
         const [customId, originalUserId, ...rest] = interaction.customId.split('_');
 
-        console.log(`[${tags.Debug}] Interaction UserId: ${interaction.user.id}`)
-        console.log(`[${tags.Debug}] Original UserId: ${originalUserId}`)
-        console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`)
+        if (interaction.customId.includes("cmdhdlrignore")) {
+            return;
+        }
+
+        console.log(`[${tags.Debug}] Interaction UserId: ${interaction.user.id}`);
+        console.log(`[${tags.Debug}] Original UserId: ${originalUserId}`);
+        console.log(`[${tags.Debug}] Same user? ${(interaction.user.id === originalUserId) ? "Yes" : "No"}`);
 
         if (interaction.user.id !== originalUserId) {
             const notTheirsContainer = new ContainerBuilder()
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`This is not your interaction.`)
-                )
+                );
 
             await interaction.reply({
                 components: [notTheirsContainer],
@@ -405,13 +399,13 @@ export class CommandHandler {
             return;
         }
 
-        const modal = this.modals.get(customId ?? '');
+        const modal = this.modals.get(customId);
         if (!modal) {
             const noModalContainer = new ContainerBuilder()
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`Couldn't find modal handler for **${customId}**. Try again later.`)
-                )
+                );
 
             await interaction.reply({
                 components: [noModalContainer],
@@ -428,14 +422,14 @@ export class CommandHandler {
                 .setAccentColor(Colors.DarkRed)
                 .addTextDisplayComponents(
                     (text) => text.setContent(`There was an error handling this modal.`)
-                )
+                );
 
             try {
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp({
                         components: [errorContainer],
                         flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
-                    })
+                    });
                 } else {
                     await interaction.reply({
                         components: [errorContainer],

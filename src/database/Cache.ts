@@ -1,4 +1,4 @@
-import { LRUCache } from 'lru-cache'
+import { LRUCache } from 'lru-cache';
 
 const options = {
     max: 1500,
@@ -8,9 +8,9 @@ const options = {
     allowStale: false,
     updateAgeOnGet: false,
     updateAgeOnHas: false,
-} as const
+} as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const cache = new LRUCache<string, any>(options)
+const cache = new LRUCache<string, any>(options);
 
-export default cache
+export default cache;

@@ -144,3 +144,7 @@ package-lock.json
 *.sqlite
 db/*
 db/
+
+# This line was added by .commitai
+# This is a directory for storing commitai stuff to make commit generation better
+.commitai/*

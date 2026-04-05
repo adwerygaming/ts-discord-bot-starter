@@ -1,3 +1,4 @@
-import "dotenv/config"
+import "dotenv/config";
 
-import "./discord/Index.js" 
+import "./discord/Index.js";
+

@@ -1,11 +1,10 @@
-import { SlashCommandBuilder } from "discord.js";
-import { SlashCommandLayout } from "../../types/DiscordTypes.js";
-import { Client, ChatInputCommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, Client, SlashCommandBuilder } from "discord.js";
+import { SlashCommandLayout } from "../../types/Discord.types.js";
 
 export default {
     metadata: new SlashCommandBuilder()
         .setName("ping")
-        .setDescription("Replies with pong!"),
+        .setDescription("Check the bot's connection and response time."),
     execute: async (_client: Client, interaction: ChatInputCommandInteraction) => {
         await interaction.reply({ content: "Pong!" });
     }

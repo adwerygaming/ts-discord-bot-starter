@@ -1,5 +1,5 @@
-import { v7 as uuidv7 } from "uuid"
-import cache from "./Cache.js"
+import { v7 as uuidv7 } from "uuid";
+import cache from "./Cache.js";
 
 interface SetDataProp<T> {
     key: string
@@ -19,7 +19,7 @@ interface DeleteDataProp {
  * @returns string - generated unique key
  */
 function GenerateRandomKey(): string {
-    return uuidv7()
+    return uuidv7();
 }
 
 /**
@@ -29,8 +29,8 @@ function GenerateRandomKey(): string {
  * @returns 
  */
 function SetData<T>({ data, key }: SetDataProp<T>): true {
-    cache.set(key, data)
-    return true
+    cache.set(key, data);
+    return true;
 }
 
 /**
@@ -39,8 +39,8 @@ function SetData<T>({ data, key }: SetDataProp<T>): true {
  * @returns T | undefined - data if found, undefined if not found
  */
 async function GetData<T>({ key }: GetDataProp): Promise<T | undefined> {
-    const res: T | undefined = await cache.get(key) as T | undefined
-    return res
+    const res: T | undefined = await cache.get(key) as T | undefined;
+    return res;
 }
 
 /**
@@ -49,9 +49,9 @@ async function GetData<T>({ key }: GetDataProp): Promise<T | undefined> {
 * @returns T | undefined - data if found, undefined if not found
 */
 function DeleteData<T>({ key }: DeleteDataProp): T | undefined {
-    const data: T | undefined = cache.get(key) as T | undefined
-    cache.delete(key)
-    return data
+    const data: T | undefined = cache.get(key) as T | undefined;
+    cache.delete(key);
+    return data;
 }
 
 export default {
@@ -59,4 +59,4 @@ export default {
     SetData,
     GetData,
     DeleteData
-}
+};
