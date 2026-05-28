@@ -4,8 +4,8 @@
   "description": "A Discord bot starter project built with TypeScript and discord.js.",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "npx tsx ./src/index.ts",
-    "start": "npx tsx ./src/index.ts",
+    "dev": "nodemon",
+    "start": "node dist/index.js",
     "lint": "npx eslint .",
     "build": "tsup"
   },
@@ -24,25 +24,25 @@
     "node": ">=21"
   },
   "devDependencies": {
-    "@types/node": "^25.0.9",
+    "@types/node": "^25.9.1",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
-    "concurrently": "^9.2.1",
     "eslint": "^9.39.2",
-    "nodemon": "^3.1.11",
+    "concurrently": "^10.0.0",
+    "nodemon": "^3.1.14",
     "tsup": "^8.5.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
-    "discord.js": "^14.25.1",
-    "dotenv": "^17.2.3",
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
     "gradient-string": "^3.0.0",
-    "jiti": "^2.6.1",
-    "lru-cache": "^11.2.4",
-    "moment-timezone": "^0.6.0",
-    "typescript-eslint": "^8.55.0",
-    "uuid": "^13.0.0",
-    "zod": "^4.3.5"
+    "jiti": "^2.7.0",
+    "lru-cache": "^11.5.1",
+    "moment-timezone": "^0.6.2",
+    "typescript-eslint": "^8.60.0",
+    "uuid": "^14.0.0",
+    "zod": "^4.4.3"
   }
 }
